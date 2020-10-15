@@ -36,7 +36,7 @@ namespace BotApp
     private PIFRates[] pifRates;
     private PIFYield[] pifYield;
     private PIFBranch[] pifBranch;
-    private PIFBranch[] duBranch;
+    private PIFBranch[] duBranch = new PIFBranch[] { };
     private List<PIFChart> pifChart = new List<PIFChart> { };
     private List<PIFChart> duChart = new List<PIFChart> { };
     private List<PIFChart> pifOnepage = new List<PIFChart> { };
@@ -89,7 +89,7 @@ namespace BotApp
         //pifYield = JsonSerializer.Deserialize<PIFYield[]>(json, options);
         //json = await hc.GetStringAsync("http://assetsmgr/api/repwa/getdata/6");
         //pifBranch = JsonSerializer.Deserialize<PIFBranch[]>(json, options);
-        string json;
+        //string json;
         var d = pifRates.Max(p => p.date);
         var l = true;
         if (!Directory.Exists("charts"))
@@ -112,29 +112,29 @@ namespace BotApp
           File.WriteAllText("charts\\dat.txt", d);
           pifChart.RemoveAll(p => true);
         }
-        l = true;
-        if (File.Exists("charts\\datdu.txt"))
-        {
-          l = File.ReadAllText("charts\\datdu.txt") != DateTime.Today.ToShortDateString();
-        }
-        if (l)
-        {
-          //foreach (var p in du.Select(p => p.Code).Union(iis.Select(p => p.Code)))
-          //{
-          //  var response = await client.GetAsync($"/report/botchartdu/{p}");
-          //  using var fs = new FileStream($"charts\\{p}.png", FileMode.Create);
-          //  await response.Content.CopyToAsync(fs);
-          //}
-          json = await client.GetStringAsync("api/repwa/getdata/7");
-          File.WriteAllText("charts\\dat7.txt", json);
-          File.WriteAllText("charts\\datdu.txt", DateTime.Today.ToShortDateString());
-          duChart.RemoveAll(p => true);
-        }
-        else
-        {
-          json = File.ReadAllText("charts\\dat7.txt");
-        }
-        duBranch = JsonSerializer.Deserialize<PIFBranch[]>(json, options);
+        //l = true;
+        //if (File.Exists("charts\\datdu.txt"))
+        //{
+        //  l = File.ReadAllText("charts\\datdu.txt") != DateTime.Today.ToShortDateString();
+        //}
+        //if (l)
+        //{
+        //foreach (var p in du.Select(p => p.Code).Union(iis.Select(p => p.Code)))
+        //{
+        //  var response = await client.GetAsync($"/report/botchartdu/{p}");
+        //  using var fs = new FileStream($"charts\\{p}.png", FileMode.Create);
+        //  await response.Content.CopyToAsync(fs);
+        //}
+        //json = await client.GetStringAsync("api/repwa/getdata/7");
+        //File.WriteAllText("charts\\dat7.txt", json);
+        //File.WriteAllText("charts\\datdu.txt", DateTime.Today.ToShortDateString());
+        //duChart.RemoveAll(p => true);
+        //}
+        //else
+        //{
+        //json = File.ReadAllText("charts\\dat7.txt");
+        //}
+        //duBranch = JsonSerializer.Deserialize<PIFBranch[]>(json, options);
       }
       catch (Exception ex)
       {
@@ -977,12 +977,18 @@ namespace BotApp
                       await SendBotMsgAsync(
                         callbackQuery: callbackQuery,
                         parseMode: ParseMode.MarkdownV2,
-                        text: $"*{viis.Name}*{b.Value.Replace(".", "\\.").Replace("-", "\\-")}",
+                        text: b != null ? $"*{viis.Name}*{b.Value.Replace(".", "\\.").Replace("-", "\\-")}" : "Нет данных",
                         replyMarkup: inlineKeyboard
                       );
                       break;
 
                     case "Состав":
+                      await SendBotMsgAsync(
+                        callbackQuery: callbackQuery,
+                        parseMode: ParseMode.Html,
+                        text: "Нет данных",
+                        replyMarkup: inlineKeyboard
+                      );
                       break;
 
                     case "Динамика":
@@ -1189,7 +1195,7 @@ namespace BotApp
                       await SendBotMsgAsync(
                         callbackQuery: callbackQuery,
                         parseMode: ParseMode.Html,
-                        text: $"<i>{vdu.Name}</i>{b.Value}",
+                        text: b != null ? $"<i>{vdu.Name}</i>{b.Value}" : "Нет данных",
                         replyMarkup: inlineKeyboard
                       );
                       break;
@@ -1291,6 +1297,7 @@ namespace BotApp
       }
       catch (Exception ex)
       {
+        _logger.LogError(ex, "Ошибка");
       }
     }
 
