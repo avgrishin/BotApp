@@ -1,14 +1,12 @@
-﻿using BotTypes = Telegram.Bot.Types;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -16,12 +14,11 @@ using System.Threading.Tasks;
 using System.Timers;
 using Telegram.Bot;
 using Telegram.Bot.Args;
+using Telegram.Bot.Exceptions;
+using Telegram.Bot.Extensions.Polling;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
-using Telegram.Bot.Exceptions;
-using Telegram.Bot.Extensions.Polling;
-using Microsoft.Extensions.Configuration;
 
 namespace BotApp
 {
@@ -369,6 +366,14 @@ namespace BotApp
                   );
                   break;
 
+                case "ПРТ":
+                  await SendBotMsgAsync(
+                    callbackQuery: callbackQuery,
+                    text: "Выберите Портфель",
+                    replyMarkup: new InlineKeyboardMarkup(getInlineKbdPifPortf())
+                  );
+                  break;
+
                 case "ОБУ":
                   {
                     var files = Directory.GetFiles(@"V:\VOL1\ASSETS\4All\uralsib_am_bot\ПИФ\ОБУ\", "*.pdf");
@@ -570,16 +575,33 @@ namespace BotApp
                   break;
 
                 case "КАР":
-                  var card = int.Parse(cd[2]);
-                  var files = Directory.GetFiles(@$"V:\VOL1\ASSETS\4All\uralsib_am_bot\ПИФ\КАР\{card}", "*.pdf");
-                  if (files.Length > 0)
                   {
-                    var msg = await Bot.SendDocumentAsync(
-                      chatId: callbackQuery.Message.Chat.Id,
-                      document: new InputOnlineFile(new MemoryStream(File.ReadAllBytes(files[0])), Path.GetFileName(files[0])),
-                      replyMarkup: new InlineKeyboardMarkup(getInlineKbdPifCard())
-                    );
-                    await Bot.DeleteMessageAsync(chatId: callbackQuery.Message.Chat.Id, messageId: callbackQuery.Message.MessageId);
+                    var card = int.Parse(cd[2]);
+                    var files = Directory.GetFiles(@$"V:\VOL1\ASSETS\4All\uralsib_am_bot\ПИФ\КАР\{card}", "*.pdf");
+                    if (files.Length > 0)
+                    {
+                      var msg = await Bot.SendDocumentAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        document: new InputOnlineFile(new MemoryStream(File.ReadAllBytes(files[0])), Path.GetFileName(files[0])),
+                        replyMarkup: new InlineKeyboardMarkup(getInlineKbdPifCard())
+                      );
+                      await Bot.DeleteMessageAsync(chatId: callbackQuery.Message.Chat.Id, messageId: callbackQuery.Message.MessageId);
+                    }
+                  }
+                  break;
+
+                case "ПРТ":
+                  {
+                    var files = Directory.GetFiles(@$"V:\VOL1\ASSETS\4All\uralsib_am_bot\ПИФ\ПРТ\{cd[2]}", "*.pdf");
+                    if (files.Length > 0)
+                    {
+                      var msg = await Bot.SendDocumentAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        document: new InputOnlineFile(new MemoryStream(File.ReadAllBytes(files[0])), Path.GetFileName(files[0])),
+                        replyMarkup: new InlineKeyboardMarkup(getInlineKbdPifPortf())
+                      );
+                      await Bot.DeleteMessageAsync(chatId: callbackQuery.Message.Chat.Id, messageId: callbackQuery.Message.MessageId);
+                    }
                   }
                   break;
               }
@@ -1345,6 +1367,14 @@ namespace BotApp
       yield return new[] { InlineKeyboardButton.WithCallbackData("Назад", "ПИФ") };
     }
 
+    private IEnumerable<IEnumerable<InlineKeyboardButton>> getInlineKbdPifPortf()
+    {
+      yield return new[] { InlineKeyboardButton.WithCallbackData("ПИФ Агрессивный", "ПИФ_ПРТ_АГР") };
+      yield return new[] { InlineKeyboardButton.WithCallbackData("ПИФ Консервативный", "ПИФ_ПРТ_КОН") };
+      yield return new[] { InlineKeyboardButton.WithCallbackData("ПИФ Сбалансированный", "ПИФ_ПРТ_СБА") };
+      yield return new[] { InlineKeyboardButton.WithCallbackData("Назад", "ПИФ") };
+    }
+
     private IEnumerable<IEnumerable<InlineKeyboardButton>> getInlineKbdIisCard()
     {
       yield return new[] { InlineKeyboardButton.WithCallbackData("Готовые решения", "ИИС_КАР_1") };
@@ -1421,7 +1451,7 @@ namespace BotApp
             InlineKeyboardButton.WithCallbackData("Список фондов", "ПИФ_ПИФ"),
             InlineKeyboardButton.WithCallbackData("Карточки клиента", "ПИФ_КАР")
           },
-            new[]
+          new[]
           {
             InlineKeyboardButton.WithCallbackData("FAQ", "ПИФ_FAQ"),
             InlineKeyboardButton.WithCallbackData("Обучение", "ПИФ_ОБУ")
@@ -1429,6 +1459,10 @@ namespace BotApp
           new[]
           {
             InlineKeyboardButton.WithCallbackData("Цены пая", "ПИФ_Price"),
+            InlineKeyboardButton.WithCallbackData("Портфели", "ПИФ_ПРТ")
+          },
+          new[]
+          {
             InlineKeyboardButton.WithCallbackData("Назад", "Продукт")
           }
         };
@@ -1480,12 +1514,13 @@ namespace BotApp
         };
     }
 
-    private async Task UnknownUpdateHandlerAsync(Telegram.Bot.Types.Update update)
+    private Task UnknownUpdateHandlerAsync(Telegram.Bot.Types.Update update)
     {
       _logger.LogError($"Unknown update type: {update.Type}");
+      return Task.FromResult(0);
     }
 
-    private async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+    private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {
       var ErrorMessage = exception switch
       {
@@ -1494,6 +1529,7 @@ namespace BotApp
       };
 
       _logger.LogError(ErrorMessage);
+      return Task.FromResult(0);
     }
   }
 }
